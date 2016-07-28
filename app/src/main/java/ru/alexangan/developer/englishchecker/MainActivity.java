@@ -16,6 +16,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,19 +39,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
     final static String questFilename = "questions";
     final static String answersFilename = "answers";
     final static int minWordLength = 4;
-    static int turnsCount = 5;
+    static int turnsCount = 5; // todo: change by progress bar in conf screen
     final int DIALOG_CONTINUE = 1;
+    static int turnDelay = 3500;
 
-    String rightAnswer;
-    String curQuestion;
+    static int rightAnswerID;
+    static String rightAnswer;
 
     ArrayList <Button> btnArray;
-    static ArrayList <String> questions, answersBlocks, rightAnswers;
-    static String [] rightAnswersDrty;
+
+    List<Question> questList;
 
     static int curNewBtnId;
-    static int blockIterator;
-    static int rightAnswerId;
     static int rightAnswersCount;
     static int questPassedCount;
 
@@ -61,7 +63,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         setContentView(R.layout.activity_main);
 
         curNewBtnId = 1;
-        blockIterator = 0;
         questPassedCount = 0;
         rightAnswersCount = 0;
 
@@ -72,9 +73,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         btnExit.setOnClickListener(this);
 
         btnArray = new ArrayList<>();
-        questions = new ArrayList<>();
-        answersBlocks = new ArrayList<>();
-        rightAnswers = new ArrayList<>();
+
+        questList = new ArrayList<>();
 
         context = getBaseContext();
 
@@ -93,16 +93,22 @@ public class MainActivity extends Activity implements View.OnClickListener {
             return;
         }
 
-        Pattern offeredAnswers = Pattern.compile("(^[A-Z].+$)", Pattern.MULTILINE); // single english line
+        ArrayList <String> answersBlocks = new ArrayList<>();
+        ArrayList <ArrayList> bunchOfAnswers = new ArrayList<>();
+        ArrayList <String> questions = new ArrayList<>();
+        ArrayList <String> rightAnswers = new ArrayList<>();
+        ArrayList<Integer> rightAnswerIDs = new ArrayList<>();
 
-        Matcher matcher = offeredAnswers.matcher(questText);
+        Pattern patternQuestion = Pattern.compile("(^[A-Z].+$)", Pattern.MULTILINE); // single english line
+
+        Matcher matcher = patternQuestion.matcher(questText);
 
         while (matcher.find())
         {
-            questions.add(matcher.group(0));
+            questions.add(matcher.group(0)); // english lines only
         }
 
-        String [] answersBlocksDirty = offeredAnswers.split(questText); // except english lines
+        String [] answersBlocksDirty = patternQuestion.split(questText); // except english lines
 
         for(String curBlk : answersBlocksDirty)
         {
@@ -111,13 +117,56 @@ public class MainActivity extends Activity implements View.OnClickListener {
             answersBlocks.add(curBlk);
         }
 
-        rightAnswersDrty = answersText.split(System.getProperty("line.separator"));
+        String [] rightAnswersDrty = answersText.split(System.getProperty("line.separator"));
 
         for(String answrStr : rightAnswersDrty)
         {
             if(answrStr.length() < minWordLength) continue;
 
-            rightAnswers.add(answrStr);
+            rightAnswers.add(answrStr); // right answers in native consequence
+        }
+
+        for (int i = 0; i < questions.size(); i++)
+        {
+            String [] curAnswersPrep = answersBlocks.get(i).split(System.getProperty("line.separator"));
+            ArrayList<String> curAnswers = new ArrayList<>();
+            rightAnswerID = -1;
+
+            // line breaks exclusion
+            for (String prepStr : curAnswersPrep)
+            {
+
+                if (prepStr.length() < minWordLength) continue;
+
+                curAnswers.add(prepStr.trim());
+            }
+
+            bunchOfAnswers.add(i, curAnswers);
+
+            for(int k = 0; k < curAnswers.size(); k++)
+            {
+                if(rightAnswerID != -1) break;
+
+                for(String answIter : rightAnswers)
+                {
+                    if(curAnswers.get(k).trim().equals(answIter.trim()))
+                    {
+                        rightAnswerIDs.add(k);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(questions.size() != bunchOfAnswers.size() || questions.size() != rightAnswerIDs.size())
+        {
+            return; // questions, set of answers and right answers IDs arrays must be the same size
+        }
+
+        for (int i = 0; i < questions.size(); i++) {
+
+            questList.add(new Question(questions.get(i), bunchOfAnswers.get(i), rightAnswerIDs.get(i)));
+            Collections.shuffle(questList);
         }
     }
 
@@ -142,40 +191,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         return builder.toString();
     }
 
-
-    private ArrayList<String> prepare_quest_data(ArrayList<String> curAnswers)
-    {
-        String [] curAnswersPrep = answersBlocks.get(blockIterator).split(System.getProperty("line.separator"));
-
-        for (String prepStr : curAnswersPrep) {
-
-            if (prepStr.length() < minWordLength) continue;
-
-            curAnswers.add(prepStr.trim());
-        }
-
-        for(int i = 0; i < curAnswers.size(); i++)
-        {
-            if(rightAnswerId != -1) continue;
-
-            for(String answIter : rightAnswers)
-            {
-                if(curAnswers.get(i).trim().equals(answIter.trim()))
-                {
-                    rightAnswerId = i+1;
-                    rightAnswer = answIter.trim();
-                    break;
-                }
-            }
-        }
-
-        curQuestion  = questions.get(blockIterator);
-
-        blockIterator++;
-
-        return curAnswers;
-    }
-
     @Override
     public void onClick(View v)
     {
@@ -186,18 +201,22 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         if (v.getId() != R.id.btnExit)
         {
-            questPassedCount++;
+
+            questList.get(questPassedCount);
+
 
             Log.d(appTAG, "questions passed " + String.valueOf(questPassedCount));
 
-            if(v.getId() == rightAnswerId) {
-                Log.d(appTAG, "clicked button with id " + String.valueOf(rightAnswerId));
+            questPassedCount++;
+
+            if(v.getId() == rightAnswerID + 1) {
+                Log.d(appTAG, "clicked button with id " + String.valueOf(rightAnswerID));
 
                 //LinearLayout.LayoutParams lParams1;
                 //lParams1 = (LinearLayout.LayoutParams) v.getLayoutParams();
 
-                Toast.makeText(this, "Правильно !", Toast.LENGTH_LONG).show();
-
+                Toast.makeText(this, "Правильно !", Toast.LENGTH_SHORT).show();
+                turnDelay = 2500;
 /*
                 Button btn = (Button) findViewById(v.getId());
                 btn.setBackgroundColor(Color.rgb(0, 99, 0));
@@ -208,15 +227,21 @@ public class MainActivity extends Activity implements View.OnClickListener {
             else
             {
                 Toast.makeText(this, "Правильный ответ:\n" + rightAnswer, Toast.LENGTH_LONG).show();
+                turnDelay = 4000;
             }
 
             if(questPassedCount % turnsCount == 0)
             {
                 Log.d(appTAG, "Your score is: " + String.valueOf(rightAnswersCount));
-                showDialog(DIALOG_CONTINUE);
 
-                questPassedCount = 0;
-                rightAnswersCount = 0;
+                // Execute some code after 4 seconds have passed
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        showDialog(DIALOG_CONTINUE);
+                    }
+                }, turnDelay);
             }
         }
 
@@ -227,7 +252,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
             public void run() {
                 nextTurn();
             }
-        }, 4000);
+        }, turnDelay);
 
     }
 
@@ -235,27 +260,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
     {
         llAnswers.removeAllViews();
         btnArray.clear();
-        rightAnswer = null;
-        curQuestion = null;
-        rightAnswerId = -1;
+        rightAnswerID = -1;
         curNewBtnId = 1;
-        ArrayList <String> curAnswers = new ArrayList<>();
+        rightAnswer = null;
 
-        prepare_quest_data(curAnswers);
+        Question curQuest = questList.get(questPassedCount);
+        rightAnswerID = curQuest.getRightAnswerId();
+        rightAnswer = curQuest.getRightAnswer();
 
-        if (curQuestion.isEmpty() || curAnswers.size() == 0 || rightAnswerId == -1)
-        {
-            return;
-        }
+        questView.setText(curQuest.getQuestion());
 
-        questView.setText(curQuestion);
-
-
-
-        for (int i = 0; i < curAnswers.size(); i++) {
-
-            if (i > 4)
-                return;
+        for (int i = 0; i < curQuest.getBunchOfAnswers().size(); i++) {
 
             // Создание LayoutParams c шириной и высотой по содержимому
             LinearLayout.LayoutParams lParams = new LinearLayout.LayoutParams(
@@ -270,7 +285,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
             btnArray.add(((Button) findViewById(id_)));
 
-            btnArray.get(i).setText(curAnswers.get(i));
+            btnArray.get(i).setText(curQuest.getBunchOfAnswers().get(i));
 
             btnArray.get(i).setOnClickListener(this);
         }
@@ -302,7 +317,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         if (id == DIALOG_CONTINUE) {
             String alertText = "Ваша оценка: " + String.valueOf(rightAnswersCount) +
-                    " из " + String.valueOf(questPassedCount) + "\n\n Продолжить тест ?";
+                    " из " + String.valueOf(turnsCount) + "\n\n Еще раз ?";
 
             ((AlertDialog)dialog).setMessage(alertText);
         }
@@ -313,6 +328,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
             switch (which) {
                 // положительная кнопка
                 case Dialog.BUTTON_POSITIVE:
+                    rightAnswersCount = 0;
                     break;
                 // негатитвная кнопка
                 case Dialog.BUTTON_NEGATIVE:

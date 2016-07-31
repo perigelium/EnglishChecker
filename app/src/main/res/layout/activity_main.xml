@@ -2,8 +2,9 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent">
+    android:padding="14dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -12,18 +13,19 @@
     <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Question"
+            android:text="Вопрос"
         android:textSize="20sp"
             android:id="@+id/questView"
         android:layout_gravity="top|left"
         android:padding="16dp" />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Выход"
-        android:id="@+id/btnExit"
-        android:layout_gravity="top|right" />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Выход"
+            android:id="@+id/btnExit"
+            android:layout_gravity="top|right" />
+
     </FrameLayout>
 
     <LinearLayout
@@ -32,7 +34,4 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
     </LinearLayout>
-
-
-
 </LinearLayout>

@@ -18,19 +18,24 @@ import android.widget.Toast;
 
 public class PrefActivity extends AppCompatActivity {
 
-    final static String appTAG = "eng_chk";
+    public final static String appTAG = "eng_chk";
+    //public final static String CurValues = "ru.alexangan.developer.englishchecker.CurValues";
+    static final private int ConfResId = 1;
+
+    static Boolean avgResultEnabled = true;
+    static int turnsCount = 5;
     private TextView mTextValue;
     String[] data = {"5", "10", "15", "20"};
-    public final static String QuestInTestName = "ru.alexangan.developer.englishchecker.QuestInTest";
-    public static int questInTestCount = 5;
-    public static char resCode = 'c';
-    Spinner spinner;
-    CheckBox chkbox;
-    SharedPreferences sPref;
-    Boolean avgChecked;
+
+    static float avgResult = 0;
+    static Spinner spinner;
+    static CheckBox chkbox;
+    static SharedPreferences sPref;
+    static Boolean avgChecked = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_pref);
@@ -38,8 +43,7 @@ public class PrefActivity extends AppCompatActivity {
         chkbox = (CheckBox) findViewById(R.id.chkBoxAverage);
         spinner = (Spinner) findViewById(R.id.spQuestCount);
 
-
-        loadPrefs();
+        //loadPrefs();
 
         // адаптер
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, data);
@@ -50,18 +54,18 @@ public class PrefActivity extends AppCompatActivity {
         spinner.setAdapter(adapter);
         // заголовок
         spinner.setPrompt("Количество вопросов в тесте");
-        // выделяем элемент
-        //spinner.setSelection(0);
-        spinner.setSelection(questInTestCount/5 - 1);
+
+        spinner.setSelection(turnsCount/5 - 1);
         // устанавливаем обработчик нажатия
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                                        int position, long id) {
-
                 //spinner.getSelectedItemPosition()
                 // or
-                questInTestCount = Integer.valueOf(spinner.getSelectedItem().toString());
+                turnsCount = Integer.valueOf(spinner.getSelectedItem().toString());
+
+                Log.d(appTAG,"onSelect-turnsCount= " + turnsCount);
             }
             @Override
             public void onNothingSelected(AdapterView<?> arg0) {
@@ -69,59 +73,105 @@ public class PrefActivity extends AppCompatActivity {
         });
     }
 
-    public void onClick(View view) {
-
-        Intent answerIntent = new Intent();
-        answerIntent.putExtra(QuestInTestName, questInTestCount);
-        answerIntent.putExtra(QuestInTestName, chkbox.isChecked());
-        answerIntent.putExtra(QuestInTestName, resCode);
-        resCode = 'c';
-
-        setResult(RESULT_OK, answerIntent);
+    @Override
+    protected void onPause() {
+        super.onPause();
 
         savePrefs();
-        this.finish();
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event)  {
-        if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
-            resCode = 'f';
-            onClick(null);
-            return true;
-        }
-        return super.onKeyDown(keyCode, event);
+    protected void onResume() {
+        super.onResume();
+
+        loadPrefs();
+    }
+
+    public void onClick(View view) {
+
+        Intent mainActivityIntent = new Intent(PrefActivity.this, MainActivity.class);
+
+        mainActivityIntent.putExtra("turnsCount", turnsCount);
+        mainActivityIntent.putExtra("avgChecked", chkbox.isChecked());
+
+        Log.d(appTAG,"onClick-turnsCount= " + turnsCount);
+
+        startActivityForResult(mainActivityIntent, ConfResId);
     }
 
     @Override
     protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
+
         state.putBoolean("avgChecked", chkbox.isChecked());
+        state.putInt("turnsCount", turnsCount);
+
+        Log.d(appTAG,"onSaveInstanceState-turnsCount= " + turnsCount);
     }
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
 
-        resCode = 'c';
         savedInstanceState.getBoolean("avgChecked", avgChecked);
+        savedInstanceState.getInt("turnsCount", turnsCount);
+
+        Log.d("eng_chk","onRestoreInstanceState-turnsCount= " + turnsCount);
     }
 
     void savePrefs() {
+
         sPref = getPreferences(MODE_PRIVATE);
         SharedPreferences.Editor ed = sPref.edit();
 
-        ed.putInt("avgResult", questInTestCount);
-        ed.putBoolean("avgChk", chkbox.isChecked());
+        ed.putInt("turnsCount", turnsCount);
+        ed.putBoolean("avgChecked", chkbox.isChecked());
 
         ed.commit();
     }
 
     void loadPrefs() {
+
         sPref = getPreferences(MODE_PRIVATE);
 
-        questInTestCount = sPref.getInt("avgResult", 0);
+        turnsCount = sPref.getInt("turnsCount", 5);
+        avgChecked = sPref.getBoolean("avgResultEnabled", true);
+    }
 
-        avgChecked = sPref.getBoolean("avgChk", false);
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == ConfResId) {
+            if (resultCode == RESULT_OK) {
+
+                avgResult = data.getFloatExtra("avgResult", 0);
+
+                Log.d(appTAG, "onActivityResult-avgResult= " + avgResult);
+            }
+        }
+    }
+
+    public void exit()
+    {
+        savePrefs();
+
+        finish();
+
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        startActivity(intent);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+
+            exit();
+
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }

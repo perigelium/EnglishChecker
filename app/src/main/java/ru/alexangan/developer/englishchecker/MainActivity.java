@@ -10,6 +10,7 @@ import android.app.Activity;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -41,31 +42,30 @@ public class MainActivity extends Activity implements View.OnClickListener {
     LinearLayout llAnswers;
     TextView questView;
     Button btnExit;
+    int wrapContent = LinearLayout.LayoutParams.WRAP_CONTENT;
 
     final static String appTAG = "eng_chk";
     final static String questFilename = "questions";
     final static String answersFilename = "answers";
     final static int minWordLength = 4;
+    final static int DIALOG_CONTINUE = 1;
     static int turnsCount = 5;
-    final int DIALOG_CONTINUE = 1;
+
     static int turnDelay = 3500;
 
     ArrayList <Button> btnArray;
     List<Question> questList;
 
-    static int rightAnswerID;
+    static int rightAnswerID = 1;
     static String rightAnswer;
-    static int curNewBtnId;
-    static int rightAnswersCount;
-    static int questPassedCount;
-    static final private int turnsCountResId = 1;
+    static int curNewBtnId = 1;
+    static int rightAnswersCount = 0;
+    static int questPassedCount = 0;
     static Boolean avgResultEnabled = true;
     static float avgResult = 0;
-    static char resCode = 'c';
     MyTask mt;
-
-    int wrapContent = LinearLayout.LayoutParams.WRAP_CONTENT;
-
+    Intent curIntent;
+    SharedPreferences sPref;
 
     /** Called when the activity is first created. */
     @Override
@@ -73,13 +73,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
-
-        Intent questionIntent = new Intent(MainActivity.this, PrefActivity.class);
-        startActivityForResult(questionIntent, turnsCountResId);
-
-        curNewBtnId = 1;
-        questPassedCount = 0;
-        rightAnswersCount = 0;
 
         llAnswers = (LinearLayout) findViewById(R.id.llAnswers);
         questView = (TextView) findViewById(R.id.questView);
@@ -99,6 +92,27 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         btnArray = new ArrayList<>();
         nextTurn();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        saveResults();
+
+        Log.d(appTAG, "MainActivity: onPause()");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        loadResults();
+
+        curIntent = getIntent();
+        loadCurPrefs();
+
+        Log.d(appTAG, "MainActivity: onResume()");
     }
 
     private void prepare_arrays(Context context, List<Question> questList)
@@ -188,7 +202,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
     }
 
-    //читаем текст из raw-ресурсов
     public static String readRawTextFile(Context context, int resId)
     {
         InputStream inputStream = context.getResources().openRawResource(resId);
@@ -214,7 +227,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
     {
         if (v.getId() == R.id.btnExit)
         {
-            finish();
+            saveResults();
+
+            exit();
         }
 
         if (v.getId() != R.id.btnExit)
@@ -230,16 +245,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
             if(v.getId() == rightAnswerID + 1) {
                 Log.d(appTAG, "clicked button with id " + String.valueOf(rightAnswerID));
 
-                //LinearLayout.LayoutParams lParams1;
-                //lParams1 = (LinearLayout.LayoutParams) v.getLayoutParams();
-
                 Toast.makeText(this, "Правильно !", Toast.LENGTH_SHORT).show();
                 turnDelay = 2500;
-/*
-                Button btn = (Button) findViewById(v.getId());
-                btn.setBackgroundColor(Color.rgb(0, 99, 0));
-                btn.requestLayout();
-*/
+
                 rightAnswersCount++;
             }
             else
@@ -253,9 +261,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 Log.d(appTAG, "Your score is: " + String.valueOf(rightAnswersCount));
 
 
-                 avgResult = avgResult!=0.0 ? (avgResult + rightAnswersCount)/2  :  rightAnswersCount;
+                 avgResult = avgResult !=0.0 ? (avgResult + rightAnswersCount)/2  :  rightAnswersCount;
 
-                // Execute some code after 4 seconds have passed
                 Handler handler = new Handler();
                 handler.postDelayed(new Runnable() {
                     @Override
@@ -266,7 +273,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
             }
         }
 
-        // Execute some code after 4 seconds have passed
         Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             @Override
@@ -363,27 +369,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
     };
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == turnsCountResId) {
-            if (resultCode == RESULT_OK) {
-                turnsCount = data.getIntExtra(PrefActivity.QuestInTestName, 5);
-                avgResultEnabled = data.getBooleanExtra(PrefActivity.QuestInTestName, true);
-                resCode = data.getCharExtra(PrefActivity.QuestInTestName, 'c');
-
-                if(resCode == 'f')
-                {
-                    mt.cancel(true);
-                    finish();
-                }
-
-                Log.d(appTAG, "checkbox is checked " + avgResultEnabled);
-            }
-        }
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);  // create menu on base of menu_main.xml
         return super.onCreateOptionsMenu(menu);
@@ -393,17 +378,46 @@ public class MainActivity extends Activity implements View.OnClickListener {
     public boolean onOptionsItemSelected(MenuItem item) {
 
         return super.onOptionsItemSelected(item);
-
     }
 
     public void onSettingsMenuClick(MenuItem item) {
-        Intent questionIntent = new Intent(MainActivity.this, PrefActivity.class);
-        startActivityForResult(questionIntent, turnsCountResId);
 
+        finish();
+    }
+
+    private void loadResults() {
+
+        sPref = getPreferences(MODE_PRIVATE);
+
+        avgResult = sPref.getFloat("avtResult", 0);
+
+        Log.d(appTAG, "loadResults");
+    }
+
+    private void saveResults()
+    {
+        sPref = getPreferences(MODE_PRIVATE);
+        SharedPreferences.Editor ed = sPref.edit();
+
+        ed.putFloat("avgResult", avgResult);
+
+        Log.d(appTAG, "saveResults");
+
+        ed.commit();
+    }
+
+    private void loadCurPrefs()
+    {
+        turnsCount = curIntent.getIntExtra("turnsCount", 5);
+        avgResultEnabled = curIntent.getBooleanExtra("avgChecked", true);
+
+        Log.d(appTAG,"loadCurPrefs-turnsCount= " + turnsCount);
     }
 
 
-    class MyTask extends AsyncTask<Void, Void, List<Question>> {
+
+    class MyTask extends AsyncTask<Void, Void, List<Question>>
+    {
 
         @Override
         protected void onPreExecute() {
@@ -440,14 +454,35 @@ public class MainActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
+
         state.putFloat("avgResult", avgResult);
-        state.putBoolean("avgChk", avgResultEnabled);
     }
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
+
         savedInstanceState.getFloat("avgResult", avgResult);
-        savedInstanceState.getBoolean("avgChk", avgResultEnabled);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+
+            exit();
+
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    public void exit()
+    {
+        finish();
+
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        startActivity(intent);
     }
 }

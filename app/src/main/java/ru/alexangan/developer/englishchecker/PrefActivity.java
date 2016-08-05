@@ -3,7 +3,7 @@ package ru.alexangan.developer.englishchecker;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceActivity;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -11,7 +11,6 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
-import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -21,6 +20,7 @@ public class PrefActivity extends AppCompatActivity {
     public final static String appTAG = "eng_chk";
     //public final static String CurValues = "ru.alexangan.developer.englishchecker.CurValues";
     static final private int ConfResId = 1;
+    final static int DIALOG_CONTINUE = 1;
 
     static Boolean avgResultEnabled = true;
     static int turnsCount = 5;
@@ -87,16 +87,41 @@ public class PrefActivity extends AppCompatActivity {
         loadPrefs();
     }
 
-    public void onClick(View view) {
+    public void onExitClick(View view) {
 
-        Intent mainActivityIntent = new Intent(PrefActivity.this, MainActivity.class);
+        if (view.getId() == R.id.btnExit) {
+            exit();
+        }
+    }
 
-        mainActivityIntent.putExtra("turnsCount", turnsCount);
-        mainActivityIntent.putExtra("avgChecked", chkbox.isChecked());
+    public void onAboutClick(View view)
+    {
+        Bundle messageArgs = new Bundle();
+        String about_prog_title = getResources().getString(R.string.about_prog_title);
+        String about_prog_text = getResources().getString(R.string.about_prog_text);
+        messageArgs.putString(AlertDialogFragment.TITLE_ID, about_prog_title);
+        messageArgs.putString(AlertDialogFragment.MESSAGE_ID, about_prog_text);
+        messageArgs.putBoolean(AlertDialogFragment.Enable_Neutral_Btn, true);
 
-        Log.d(appTAG,"onClick-turnsCount= " + turnsCount);
+        FragmentManager manager = getSupportFragmentManager();
+        AlertDialogFragment dialog = new AlertDialogFragment();
+        dialog.setArguments(messageArgs);
+        dialog.show(manager, "dialog");
+    }
 
-        startActivityForResult(mainActivityIntent, ConfResId);
+    public void onStartTestClick(View view) {
+
+        if (view.getId() == R.id.btnStartTest)
+        {
+            Intent mainActivityIntent = new Intent(PrefActivity.this, MainActivity.class);
+
+            mainActivityIntent.putExtra("turnsCount", turnsCount);
+            mainActivityIntent.putExtra("avgChecked", chkbox.isChecked());
+
+            Log.d(appTAG, "onClick-turnsCount= " + turnsCount);
+
+            startActivityForResult(mainActivityIntent, ConfResId);
+        }
     }
 
     @Override
@@ -173,5 +198,15 @@ public class PrefActivity extends AppCompatActivity {
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    public void onDialogYesClick()
+    {
+
+    }
+
+    public void onDialogNoClick()
+    {
+
     }
 }

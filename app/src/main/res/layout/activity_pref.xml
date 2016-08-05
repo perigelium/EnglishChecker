@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="match_parent"
     android:layout_width="match_parent"
     android:padding="15dp"
     android:orientation="vertical">
 
+    <LinearLayout
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:padding="10dp"
+        android:orientation="vertical">
 
     <CheckBox
         android:layout_width="wrap_content"
@@ -34,18 +39,43 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
     </Spinner>
-
     </LinearLayout>
+
+
         <Button
             android:layout_height="wrap_content"
             android:id="@+id/btnStartTest"
             android:padding="16dp"
             android:text="Начать тест"
             android:gravity="bottom"
-            android:layout_gravity="right"
+            android:layout_gravity="bottom|right"
             android:layout_width="wrap_content"
-            android:onClick="onClick"
+            android:onClick="onStartTestClick"
             android:nestedScrollingEnabled="true">
         </Button>
+    </LinearLayout>
 
-</LinearLayout>
+    <TextView
+        android:id="@+id/tvAboutProg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="О программе"
+        android:textSize="16sp"
+        android:layout_gravity="bottom|left"
+        android:onClick="onAboutClick"
+        android:clickable="true">
+    </TextView>
+
+    <Button
+        android:layout_height="wrap_content"
+        android:id="@+id/btnExit"
+        android:padding="16dp"
+        android:text="Выход"
+        android:gravity="right"
+        android:layout_gravity="bottom|right"
+        android:layout_width="wrap_content"
+        android:onClick="onExitClick"
+        android:nestedScrollingEnabled="true">
+    </Button>
+
+</FrameLayout>

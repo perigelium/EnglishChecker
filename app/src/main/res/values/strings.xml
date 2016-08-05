@@ -3,8 +3,14 @@
 
     <string name="exit">Результат</string>
     <string name="alert_dlg_text">Продолжить?</string>
-    <string name="yes">Да</string>
-    <string name="no">Нет</string>
-    <string name="cancel">Отмена</string>
+    <string name="btnYes">Да</string>
+    <string name="btnNo">Нет</string>
+    <string name="btnNeutral">Назад</string>
+    <string name="action_settings">Настройки</string>
+    <string name="about_prog_text">Программа является ремейком старинной программы-теста English Trainer Александра Глазкова
+        для углубленной проверки знаний английского языка.\n\n                © Александр Анган 2016\n</string>
+    <string name="about_prog_title">О Программе</string>
+    <string name="defaul_alert_text">alertText</string>
+    <string name="results_dialog_title">Результаты</string>
 
 </resources>

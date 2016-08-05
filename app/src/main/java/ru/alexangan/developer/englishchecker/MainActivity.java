@@ -3,12 +3,12 @@ package ru.alexangan.developer.englishchecker;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
 import android.os.Handler;
-import android.preference.PreferenceManager;
+import android.support.v4.app.FragmentManager;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -23,11 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +34,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.widget.Toast;
 
-public class MainActivity extends Activity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     Context context;
     LinearLayout llAnswers;
@@ -80,7 +78,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         btnExit.setOnClickListener(this);
 
-        context = getBaseContext();
+        context = MainActivity.this;
 
         questList = new ArrayList<>();
 
@@ -222,18 +220,29 @@ public class MainActivity extends Activity implements View.OnClickListener {
         return builder.toString();
     }
 
-    @Override
-    public void onClick(View v)
+    public void onExitClick(View view)
     {
-        if (v.getId() == R.id.btnExit)
-        {
             saveResults();
 
             exit();
-        }
+    }
 
-        if (v.getId() != R.id.btnExit)
-        {
+    public void onDialogYesClick()
+    {
+
+    }
+
+    public void onDialogNoClick()
+    {
+        saveResults();
+
+        exit();
+    }
+
+    @Override
+    public void onClick(View v)
+    {
+        if (v.getId() != R.id.btnExit) {
 
             questList.get(questPassedCount);
 
@@ -242,45 +251,63 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
             questPassedCount++;
 
-            if(v.getId() == rightAnswerID + 1) {
+            if (v.getId() == rightAnswerID + 1) {
                 Log.d(appTAG, "clicked button with id " + String.valueOf(rightAnswerID));
 
                 Toast.makeText(this, "Правильно !", Toast.LENGTH_SHORT).show();
                 turnDelay = 2500;
 
                 rightAnswersCount++;
-            }
-            else
-            {
+            } else {
                 Toast.makeText(this, "Правильный ответ:\n" + rightAnswer, Toast.LENGTH_LONG).show();
                 turnDelay = 4000;
             }
 
-            if(questPassedCount % turnsCount == 0)
-            {
+            if (questPassedCount % turnsCount == 0) {
                 Log.d(appTAG, "Your score is: " + String.valueOf(rightAnswersCount));
 
 
-                 avgResult = avgResult !=0.0 ? (avgResult + rightAnswersCount)/2  :  rightAnswersCount;
+                avgResult = avgResult != 0 ? (avgResult + rightAnswersCount) / 2 : rightAnswersCount;
 
                 Handler handler = new Handler();
                 handler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        showDialog(DIALOG_CONTINUE);
+                        showResultsDialog();
+                        //showDialog(DIALOG_CONTINUE);
                     }
                 }, turnDelay);
             }
+
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    nextTurn();
+                }
+            }, turnDelay);
         }
+    }
 
-        Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                nextTurn();
-            }
-        }, turnDelay);
+    public void showResultsDialog()
+    {
+        Bundle messageArgs = new Bundle();
+        String about_prog_title = getResources().getString(R.string.results_dialog_title);
 
+        String alertText = "Ваша оценка: " + String.valueOf(rightAnswersCount) +
+                " из " + String.valueOf(turnsCount) + "\n\n" + "средняя оценка: " + avgResult + "\n\n Еще раз ?";
+
+        messageArgs.putString(AlertDialogFragment.TITLE_ID, about_prog_title);
+        messageArgs.putString(AlertDialogFragment.MESSAGE_ID, alertText);
+        messageArgs.putBoolean(AlertDialogFragment.Enable_Yes_Btn, true);
+        messageArgs.putBoolean(AlertDialogFragment.Enable_No_Btn, true);
+
+        FragmentManager manager = getSupportFragmentManager();
+        AlertDialogFragment dialog = new AlertDialogFragment();
+        dialog.setArguments(messageArgs);
+        dialog.show(manager, "dialog");
+
+        rightAnswersCount = 0;
     }
 
     protected void nextTurn()
@@ -299,11 +326,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         for (int i = 0; i < curQuest.getBunchOfAnswers().size(); i++) {
 
-            // Создание LayoutParams c шириной и высотой по содержимому
             LinearLayout.LayoutParams lParams = new LinearLayout.LayoutParams(
                     wrapContent, wrapContent);
 
-            // создаем Button, пишем текст и добавляем в LinearLayout
             Button btnNew = new Button(this);
             btnNew.setId(curNewBtnId++);
             final int id_ = btnNew.getId();
@@ -321,19 +346,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
     protected Dialog onCreateDialog(int id) {
         if (id == DIALOG_CONTINUE) {
             AlertDialog.Builder adb = new AlertDialog.Builder(this);
-            // заголовок
+
             adb.setTitle(R.string.exit);
-            // сообщение
-            adb.setMessage("alertText");
-            // иконка
+            adb.setMessage(R.string.defaul_alert_text);
             adb.setIcon(android.R.drawable.ic_dialog_info);
-            // кнопка положительного ответа
-            adb.setPositiveButton(R.string.yes, myClickListener);
-            // кнопка отрицательного ответа
-            adb.setNegativeButton(R.string.no, myClickListener);
-            // кнопка нейтрального ответа
-            //adb.setNeutralButton(R.string.cancel, myClickListener);
-            // создаем диалог
+
+            adb.setPositiveButton(R.string.btnYes, myClickListener);
+            adb.setNegativeButton(R.string.btnNo, myClickListener);
+
             return adb.create();
         }
         return super.onCreateDialog(id);
@@ -353,15 +373,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
     DialogInterface.OnClickListener myClickListener = new DialogInterface.OnClickListener() {
         public void onClick(DialogInterface dialog, int which) {
             switch (which) {
-                // положительная кнопка
+
                 case Dialog.BUTTON_POSITIVE:
                     rightAnswersCount = 0;
                     break;
-                // негатитвная кнопка
                 case Dialog.BUTTON_NEGATIVE:
                     finish();
                     break;
-                // нейтральная кнопка
                 //case Dialog.BUTTON_NEUTRAL:
                   //  break;
             }

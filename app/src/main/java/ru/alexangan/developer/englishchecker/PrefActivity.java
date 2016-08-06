@@ -29,9 +29,10 @@ public class PrefActivity extends AppCompatActivity {
 
     static float avgResult = 0;
     static Spinner spinner;
-    static CheckBox chkbox;
+    static CheckBox chkboxAvgMark, chkboxNewQuestOnly;
     static SharedPreferences sPref;
     static Boolean avgChecked = true;
+    static Boolean newQuestOnlyChecked = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,16 +41,19 @@ public class PrefActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_pref);
 
-        chkbox = (CheckBox) findViewById(R.id.chkBoxAverage);
+        chkboxAvgMark = (CheckBox) findViewById(R.id.chkBoxAverage);
+        chkboxNewQuestOnly = (CheckBox) findViewById(R.id.chkboxNewQuestOnly);
         spinner = (Spinner) findViewById(R.id.spQuestCount);
 
-        //loadPrefs();
+        loadPrefs();
 
         // адаптер
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, data);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        chkbox.setChecked(avgChecked);
+        chkboxAvgMark.setChecked(avgChecked);
+        chkboxNewQuestOnly.setChecked(newQuestOnlyChecked);
+
 
         spinner.setAdapter(adapter);
         // заголовок
@@ -116,7 +120,7 @@ public class PrefActivity extends AppCompatActivity {
             Intent mainActivityIntent = new Intent(PrefActivity.this, MainActivity.class);
 
             mainActivityIntent.putExtra("turnsCount", turnsCount);
-            mainActivityIntent.putExtra("avgChecked", chkbox.isChecked());
+            mainActivityIntent.putExtra("avgChecked", chkboxAvgMark.isChecked());
 
             Log.d(appTAG, "onClick-turnsCount= " + turnsCount);
 
@@ -128,7 +132,8 @@ public class PrefActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
 
-        state.putBoolean("avgChecked", chkbox.isChecked());
+        state.putBoolean("avgChecked", chkboxAvgMark.isChecked());
+        state.putBoolean("newQuestOnlyChecked", chkboxNewQuestOnly.isChecked());
         state.putInt("turnsCount", turnsCount);
 
         Log.d(appTAG,"onSaveInstanceState-turnsCount= " + turnsCount);
@@ -139,6 +144,7 @@ public class PrefActivity extends AppCompatActivity {
         super.onRestoreInstanceState(savedInstanceState);
 
         savedInstanceState.getBoolean("avgChecked", avgChecked);
+        savedInstanceState.getBoolean("newQuestOnlyChecked", newQuestOnlyChecked);
         savedInstanceState.getInt("turnsCount", turnsCount);
 
         Log.d("eng_chk","onRestoreInstanceState-turnsCount= " + turnsCount);
@@ -150,7 +156,8 @@ public class PrefActivity extends AppCompatActivity {
         SharedPreferences.Editor ed = sPref.edit();
 
         ed.putInt("turnsCount", turnsCount);
-        ed.putBoolean("avgChecked", chkbox.isChecked());
+        ed.putBoolean("avgChecked", chkboxAvgMark.isChecked());
+        ed.putBoolean("newQuestOnlyChecked", chkboxNewQuestOnly.isChecked());
 
         ed.commit();
     }
@@ -160,7 +167,8 @@ public class PrefActivity extends AppCompatActivity {
         sPref = getPreferences(MODE_PRIVATE);
 
         turnsCount = sPref.getInt("turnsCount", 5);
-        avgChecked = sPref.getBoolean("avgResultEnabled", true);
+        avgChecked = sPref.getBoolean("avgChecked", true);
+        newQuestOnlyChecked = sPref.getBoolean("newQuestOnlyChecked", true);
     }
 
     @Override
@@ -198,15 +206,5 @@ public class PrefActivity extends AppCompatActivity {
             return true;
         }
         return super.onKeyDown(keyCode, event);
-    }
-
-    public void onDialogYesClick()
-    {
-
-    }
-
-    public void onDialogNoClick()
-    {
-
     }
 }

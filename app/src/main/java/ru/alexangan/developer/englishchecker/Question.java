@@ -8,14 +8,14 @@ import java.util.ArrayList;
 public class Question {
 
     private String question;
-    private Integer rightAnswerId;
+    private Integer rightAnswerId, rightAnswerSn;
     private ArrayList<String> bunchOfAnswers;
-    private String rightAnswer;
 
-    public Question(String question, ArrayList<String> bunchOfAnswers, Integer rightAnswerId) {
+    public Question(String question, ArrayList<String> bunchOfAnswers, Integer rightAnswerId, Integer rightAnswerSn) {
 
         this.question = question;
         this.rightAnswerId = rightAnswerId;
+        this.rightAnswerSn = rightAnswerSn;
         this.bunchOfAnswers = bunchOfAnswers;
     }
 
@@ -24,7 +24,7 @@ public class Question {
         return bunchOfAnswers;
     }
 
-    public Integer getRightAnswerId() {
+    public Integer getRightAnswerID() {
         return rightAnswerId;
     }
 
@@ -35,5 +35,9 @@ public class Question {
     public String getRightAnswer() {
 
         return bunchOfAnswers.get(rightAnswerId);
+    }
+
+    public Integer getRightAnswerSN() {
+        return rightAnswerSn;
     }
 }

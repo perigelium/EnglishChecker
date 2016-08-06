@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -25,6 +26,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,27 +41,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     Context context;
     LinearLayout llAnswers;
     TextView questView;
-    Button btnExit;
+    TextView btnExit;
     int wrapContent = LinearLayout.LayoutParams.WRAP_CONTENT;
 
     final static String appTAG = "eng_chk";
     final static String questFilename = "questions";
     final static String answersFilename = "answers";
     final static int minWordLength = 4;
-    final static int DIALOG_CONTINUE = 1;
     static int turnsCount = 5;
+    static boolean prepareArraysSucceeded = false;
 
     static int turnDelay = 3500;
 
     ArrayList <Button> btnArray;
     List<Question> questList;
+    static String rightAnswersSnSet = ",";
+    ArrayList <Integer> rightAnswersNums;
 
     static int rightAnswerID = 1;
+    static int rightAnswerSN = 0;
     static String rightAnswer;
     static int curNewBtnId = 1;
     static int rightAnswersCount = 0;
     static int questPassedCount = 0;
     static Boolean avgResultEnabled = true;
+    static Boolean newQuestOnly = true;
     static float avgResult = 0;
     MyTask mt;
     Intent curIntent;
@@ -67,33 +73,45 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     /** Called when the activity is first created. */
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
 
         llAnswers = (LinearLayout) findViewById(R.id.llAnswers);
         questView = (TextView) findViewById(R.id.questView);
-        btnExit = (Button) findViewById(R.id.btnExit);
+        btnExit = (TextView) findViewById(R.id.btnExit);
 
-        btnExit.setOnClickListener(this);
+        //btnExit.setOnClickListener(this);
 
         context = MainActivity.this;
 
+        rightAnswersNums = new ArrayList<>();
         questList = new ArrayList<>();
 
-        mt = new MyTask();
-        mt.execute();
+        //mt = new MyTask();
+        //mt.execute();
 
-        getTaskResult();
-        //prepare_arrays(context);
+        //getTaskResult();
+
+        loadResults();
+
+        prepare_arrays(context, questList);
+
+        if(questList.size() == 0)
+        {
+            Log.d(appTAG, "MainActivity: Prepare arrays failed");
+            return;
+        }
 
         btnArray = new ArrayList<>();
         nextTurn();
     }
 
     @Override
-    protected void onPause() {
+    protected void onPause()
+    {
         super.onPause();
 
         saveResults();
@@ -102,7 +120,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
-    protected void onResume() {
+    protected void onResume()
+    {
         super.onResume();
 
         loadResults();
@@ -148,12 +167,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         String [] rightAnswersDrty = answersText.split(System.getProperty("line.separator"));
+        int d = 0;
 
         for(String answrStr : rightAnswersDrty)
         {
             if(answrStr.length() < minWordLength) continue;
 
             rightAnswers.add(answrStr); // right answers in native consequence
+            rightAnswersNums.add(d++);
         }
 
         for (int i = 0; i < questions.size(); i++)
@@ -173,17 +194,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             bunchOfAnswers.add(i, curAnswers);
 
-            for(int k = 0; k < curAnswers.size(); k++)
+whileAnswerIdFound:
+            for(int j = 0; j < curAnswers.size(); j++)
             {
                 if(rightAnswerID != -1) break;
 
-                for(String answIter : rightAnswers)
-                {
-                    if(curAnswers.get(k).trim().equals(answIter.trim()))
-                    {
-                        rightAnswerIDs.add(k);
-                        break;
+                try {
+                    for (int n = 0; n< rightAnswers.size(); n++) {
+                        if (curAnswers.get(j).trim().equals(rightAnswers.get(n).trim())) {
+                            rightAnswerIDs.add(j);
+                            break whileAnswerIdFound;
+                        }
                     }
+                }
+                catch (Exception e)
+                {
+
                 }
             }
         }
@@ -195,9 +221,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         for (int i = 0; i < questions.size(); i++) {
 
-            questList.add(new Question(questions.get(i), bunchOfAnswers.get(i), rightAnswerIDs.get(i)));
-            Collections.shuffle(questList);
+            questList.add(new Question(questions.get(i), bunchOfAnswers.get(i), rightAnswerIDs.get(i), i));
         }
+
+        Collections.shuffle(questList);
+        rightAnswersNums.clear();
+
+        String [] RA = rightAnswersSnSet.split(",");
+
+        for(String curA : RA)
+        {
+            try
+            {
+                int curN = Integer.parseInt(curA);
+                rightAnswersNums.add(curN);
+            }
+            catch(NumberFormatException nfe)
+            {
+            }
+        }
+
+        if(rightAnswersNums.size() == rightAnswers.size())
+        {
+            rightAnswersNums.clear();
+        }
+
+
+        return;
     }
 
     public static String readRawTextFile(Context context, int resId)
@@ -229,7 +279,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     public void onDialogYesClick()
     {
-
+        // stub for alert dialog fragment
     }
 
     public void onDialogNoClick()
@@ -246,13 +296,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             questList.get(questPassedCount);
 
-
             Log.d(appTAG, "questions passed " + String.valueOf(questPassedCount));
 
             questPassedCount++;
 
             if (v.getId() == rightAnswerID + 1) {
-                Log.d(appTAG, "clicked button with id " + String.valueOf(rightAnswerID));
+
+                if(newQuestOnly)
+                {
+                    rightAnswersSnSet += String.valueOf(rightAnswerSN) + ",";
+                }
+
+                Log.d(appTAG, "clicked right answer with id " + String.valueOf(rightAnswerID));
 
                 Toast.makeText(this, "Правильно !", Toast.LENGTH_SHORT).show();
                 turnDelay = 2500;
@@ -265,7 +320,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             if (questPassedCount % turnsCount == 0) {
                 Log.d(appTAG, "Your score is: " + String.valueOf(rightAnswersCount));
-
 
                 avgResult = avgResult != 0 ? (avgResult + rightAnswersCount) / 2 : rightAnswersCount;
 
@@ -315,11 +369,41 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         llAnswers.removeAllViews();
         btnArray.clear();
         rightAnswerID = -1;
+        rightAnswerID = 0;
         curNewBtnId = 1;
         rightAnswer = null;
+        boolean isCurRightAnswerOld = true;
 
         Question curQuest = questList.get(questPassedCount);
-        rightAnswerID = curQuest.getRightAnswerId();
+
+        rightAnswerSN = curQuest.getRightAnswerSN();
+
+
+        if(newQuestOnly)
+        {
+            while(isCurRightAnswerOld)
+            {
+                int k = 0;
+
+                for (k = 0; k < rightAnswersNums.size(); k++) {
+                    if (rightAnswersNums.get(k) == rightAnswerSN) {
+
+                        questPassedCount++;
+                        curQuest = questList.get(questPassedCount);
+                        rightAnswerSN = curQuest.getRightAnswerSN();
+                        k = 0;
+
+                        break;
+                    }
+                }
+
+                if (k == rightAnswersNums.size()) {
+                    isCurRightAnswerOld = false;
+                }
+            }
+        }
+
+        rightAnswerID = curQuest.getRightAnswerID();
         rightAnswer = curQuest.getRightAnswer();
 
         questView.setText(curQuest.getQuestion());
@@ -329,6 +413,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             LinearLayout.LayoutParams lParams = new LinearLayout.LayoutParams(
                     wrapContent, wrapContent);
 
+            lParams.gravity = Gravity.CENTER;
             Button btnNew = new Button(this);
             btnNew.setId(curNewBtnId++);
             final int id_ = btnNew.getId();
@@ -343,71 +428,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    protected Dialog onCreateDialog(int id) {
-        if (id == DIALOG_CONTINUE) {
-            AlertDialog.Builder adb = new AlertDialog.Builder(this);
-
-            adb.setTitle(R.string.exit);
-            adb.setMessage(R.string.defaul_alert_text);
-            adb.setIcon(android.R.drawable.ic_dialog_info);
-
-            adb.setPositiveButton(R.string.btnYes, myClickListener);
-            adb.setNegativeButton(R.string.btnNo, myClickListener);
-
-            return adb.create();
-        }
-        return super.onCreateDialog(id);
-    }
-
-    protected void onPrepareDialog(int id, Dialog dialog) {
-        super.onPrepareDialog(id, dialog);
-
-        if (id == DIALOG_CONTINUE) {
-            String alertText = "Ваша оценка: " + String.valueOf(rightAnswersCount) +
-                    " из " + String.valueOf(turnsCount) + "\n\n" + "средняя оценка: " + avgResult + "\n\n Еще раз ?";
-
-            ((AlertDialog)dialog).setMessage(alertText);
-        }
-    }
-
-    DialogInterface.OnClickListener myClickListener = new DialogInterface.OnClickListener() {
-        public void onClick(DialogInterface dialog, int which) {
-            switch (which) {
-
-                case Dialog.BUTTON_POSITIVE:
-                    rightAnswersCount = 0;
-                    break;
-                case Dialog.BUTTON_NEGATIVE:
-                    finish();
-                    break;
-                //case Dialog.BUTTON_NEUTRAL:
-                  //  break;
-            }
-        }
-    };
-
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
         getMenuInflater().inflate(R.menu.menu_main, menu);  // create menu on base of menu_main.xml
         return super.onCreateOptionsMenu(menu);
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
         return super.onOptionsItemSelected(item);
     }
 
-    public void onSettingsMenuClick(MenuItem item) {
-
-        finish();
+    public void onSettingsMenuClick(MenuItem item)
+    {
+        finish(); // return to preferences screen
     }
 
-    private void loadResults() {
-
+    private void loadResults()
+    {
         sPref = getPreferences(MODE_PRIVATE);
 
         avgResult = sPref.getFloat("avtResult", 0);
+
+        if(newQuestOnly)
+        {
+            rightAnswersSnSet = sPref.getString("rightAnswersSnSet", ",");
+        }
 
         Log.d(appTAG, "loadResults");
     }
@@ -419,6 +467,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         ed.putFloat("avgResult", avgResult);
 
+        if(newQuestOnly)
+        {
+            ed.putString("rightAnswersSnSet", rightAnswersSnSet);
+        }
+
         Log.d(appTAG, "saveResults");
 
         ed.commit();
@@ -428,11 +481,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     {
         turnsCount = curIntent.getIntExtra("turnsCount", 5);
         avgResultEnabled = curIntent.getBooleanExtra("avgChecked", true);
+        newQuestOnly = curIntent.getBooleanExtra("newQuestOnlyChecked", true);
 
         Log.d(appTAG,"loadCurPrefs-turnsCount= " + turnsCount);
     }
-
-
 
     class MyTask extends AsyncTask<Void, Void, List<Question>>
     {
@@ -458,7 +510,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void getTaskResult() {
+    private void getTaskResult()
+    {
         if (mt == null) return;
         try {
             questList = mt.get();

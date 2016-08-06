@@ -12,19 +12,25 @@
         android:padding="10dp"
         android:orientation="vertical">
 
-    <CheckBox
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Считать среднюю оценку"
-        android:id="@+id/chkBoxAverage"
-        android:layout_gravity="left" />
+        <CheckBox
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Считать среднюю оценку"
+            android:id="@+id/chkBoxAverage"
+            android:layout_gravity="left" />
 
+        <CheckBox
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Не повторять вопросы, на которые был дан правильный ответ"
+            android:id="@+id/chkboxNewQuestOnly"
+            android:layout_gravity="left" />
 
-    <LinearLayout
-    android:layout_height="wrap_content"
-    android:layout_width="match_parent"
-    android:padding="10dp"
-    android:orientation="horizontal">
+        <LinearLayout
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:padding="10dp"
+            android:orientation="horizontal">
 
     <TextView
         android:id="@+id/tvQuestCount"
